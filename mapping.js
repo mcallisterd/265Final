@@ -1,17 +1,32 @@
 start();
 
 function start(){
-  d3.json("africa_map.geo.json")
-    .then(
-      function(data){
-        graph(data);
-    },
-      function(err){
-        console.log(err);
-    });
+  var promise_pile  = [
+    d3.json("africa_map.geo.json"),
+    d3.csv("malaria_mort.csv")];
+  Promise.all(promise_pile)
+         .then(
+           function(data){
+             var geoData = data[0];
+             var malData = data[1];
+
+             var dictionary={};
+             malData.forEach(function(place){
+               dictionary[place.Country]=place;
+             })
+
+             geoData.features.forEach(function(country){
+               country.properties.malaria = dictionary[country.properties.brk_name];
+             })
+
+             graph(geoData);
+         },
+           function(err){
+             console.log(err);
+         });
 }
 
-function graph(data){
+function graph(gData,mData){
   var height = 500;
   var width = 500;
 
@@ -52,12 +67,15 @@ function graph(data){
                        .translate(-390,50));
 
   countries.selectAll("path")
-          .data(data.features)
+          .data(gData.features)
           .enter()
           .append("path")
           .attr("d",geoMagic)
           .attr("stroke","black")
-          .attr("fill","none");
+          .attr("fill","none")
+          .attr("id",function(d,i){
+            return d["properties"]["brk_name"];
+          });
 
    countries.append("rect")
             .attr("x",0)
@@ -66,87 +84,21 @@ function graph(data){
             .attr("height",height)
             .attr("opacity",0)
             .attr("fill","white");
-
-  // var dirns = svg.selectAll("g#new")
-  //                .data(["north","south","east","west"])
-  //                .enter()
-  //                .append("g")
-  //                .attr("class","pan")
-  //                .attr("id",function(d){return d;});
-  //
-  // dirns.append("rect")
-  //      .attr("x",function(d,i){
-  //        if(i==2){return width-20;} return 0;
-  //      })
-  //      .attr("y",function(d,i){
-  //        if(i==1){return height-20;}
-  //        else if(i>1){return 20;} return 0;
-  //      })
-  //      .attr("width",function(d,i){
-  //        if(i<2){return width;} return 20;
-  //      })
-  //      .attr("height",function(d,i){
-  //        if(i<2){return 20;} return height-40;
-  //      });
-  // var dicto = {0:"&uarr;",1:"&darr;",2:"&rarr;",3:"&larr;"}
-  // dirns.append("text")
-  //      .attr("x",function(d,i){
-  //        if(i<2){return width/2;} return ((i+1)%2)*(width-20)+5;
-  //      })
-  //      .attr("y",function(d,i){
-  //        if(i<2){return (i%2)*(height-20)+15;} return height/2;
-  //      })
-  //      .html(function(d,i){return dicto[i]});
-  // d3.selectAll(".pan")
-  //   .on("click",function(){
-  //     var off = projection.translate();
-  //     var move = 40;
-  //     var dirn = d3.select(this).attr("id");
-  //     switch(dirn){
-  //       case "north":
-  //         off[1]+=move;
-  //         break;
-  //       case "south":
-  //         off[1]-=move;
-  //         break;
-  //       case "east":
-  //         off[0]-=move;
-  //         break;
-  //       case "west":
-  //         off[0]+=move;
-  //         break;
-  //     }
-  //     projection.translate(off);
-  //     svg.selectAll("path")
-  //        .transition()
-  //        .attr("d",geoMagic);
-  //   })
-
+  malaria(2010)
 }
 
-function temperatureByYearByCountry(){
-  d3.csv("ClimateAndCodes.csv")
-    .then(
-      function(d){
-        var tempData = [];
-        var precipData = [];
-        d.forEach(function(piece){
-          if(piece.Code!="SSD"){
-            tempData.push(d3.json("http://climatedataapi.worldbank.org/climateweb/rest/v1/country/mavg/tas/1980/1999/"+piece.Code));
-            precipData.push(d3.json("http://climatedataapi.worldbank.org/climateweb/rest/v1/country/mavg/pr/1980/1999/"+piece.Code));
-          }
-        });
-        Promise.all(precipData.concat(tempData))
-               .then(
-                 function(megaData){
-                  console.log(megaData);
-                 },
-                 function(err2){
-                   console.log(err2);
-                 }
-               )
-    },
-      function(err){
-        console.log(err);
-      })
+function malaria(year){
+
+  var countries = d3.select("g#pathHolder")
+                    .selectAll("path");
+
+  var colorScale = d3.scaleOrdinal(d3.schemeBlues[5])
+                     .domain([0,10000]);
+
+  countries.attr("fill",function(d){
+    if(d.properties.malaria){
+      return colorScale(d.properties.malaria[year]);
+    }
+      return "white";
+  })
 }
