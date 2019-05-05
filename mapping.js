@@ -60,6 +60,7 @@ function start(){
                else{
                  country.properties.daters= {Country:country.properties.brk_name};
                }
+               console.log(country.properties.daters);
              })
 
              graph(geoData);
@@ -167,6 +168,7 @@ function scaleDealer(index,data){
   //d3.scaleSequential(d3.interpolateReds)
   //.domain([0,d3.max(data,function(d){return d;})]) no range.
 }
+
 //removed allC parameter which was the country attrOfSelection
 // and instead of selection and then .attr..., we did allC.attr...
 //d3.select(svgName).select("g#pathHolder").selectAll("path")
@@ -174,7 +176,10 @@ function fillsBaby(allC, color, attr, attr2){
     allC.attr("fill",function(d){
       var x=d.properties.daters[attr];
       if(x){
-        if(attr2){return color(x[attr2]);}
+        if(attr2){
+          if(x[attr2]){return color(x[attr2]);}
+          else{return "white"}
+        }
         else{return color(x);}
       }
       else{ return "white";}
@@ -191,6 +196,18 @@ function WASH(svgSelector,allOrH){
   var data = attrOfSelection(countries,"wash",allOrH);
   var colorScale = scaleDealer(1,data);
   fillsBaby(countries,colorScale,"wash",allOrH);
+
+  cholera(svgSelector,2000);
+}
+
+//valid years are in 2016-1960
+function cholera(svgSelector,year){
+  var countries = d3.select(svgSelector)
+                    .select("g#pathHolder")
+                    .selectAll("path");
+  var data = attrOfSelection(countries,"cholera",year);
+  var colorScale = scaleDealer(2,data);
+  fillsBaby(countries,colorScale,"cholera",year);
 }
 
 function checkingSomething(){
