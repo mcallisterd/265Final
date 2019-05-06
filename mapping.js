@@ -9,7 +9,8 @@ function start(){
     d3.json("cholera.json"),
     d3.csv("diarrhea1.csv"),
     d3.csv("diarrheaData.csv"),
-    d3.csv("allTheWater.csv")
+    d3.csv("allTheWater.csv"),
+    d3.csv("happy.csv")
   ];
   Promise.all(promise_pile)
          .then(
@@ -22,6 +23,7 @@ function start(){
              var diaData = data[5];
              var d2aData = data[6];
              var watData = data[7];
+             var hapData = data[8];
 
              var dictionary={};
 
@@ -73,32 +75,19 @@ function start(){
 //tWat is in 10^9 m^3/year, so is aWat, so is uWat, uWatPer is m^3 /person/year
 //JMP is % of people with clean water. To make map look better, I transform this by
 //subtracting from 100, to find % of people WITHOUT clean water
-             var varDict = {"Total population":"popTime","GDP per capita":"GDP",
-              "Long-term average annual precipitation in depth":"rDep",
-              "Number of people undernourished (3-year average)":"hunger",
-              "Agricultural water withdrawal":"aWat","Total water withdrawal":"uWat",
-              "Total water withdrawal per capita":"uWatper",
-              "Total population with access to safe drinking-water (JMP)":"JMP",
-              "Long-term average annual precipitation in volume":"rVol"};
-
-             watData.forEach(function(stat){
-               if(dictionary[stat.Country][varDict[stat.Variable]]){
-                 dictionary[stat.Country][varDict[stat.Variable]][stat.Year]=stat.Value;
-                 if(varDict[stat.Variable]==="JMP"){
-                   dictionary[stat.Country][varDict[stat.Variable]][stat.Year]=100-stat.Value;
-                 }
-               }
-               else{
-                 var o = {};
-                 o[stat.Year]=stat.Value;
-                 dictionary[stat.Country][varDict[stat.Variable]]=o;
-                 if(varDict[stat.Variable]==="JMP"){
-                   dictionary[stat.Country][varDict[stat.Variable]][stat.Year]=100-stat.Value;
-                 }
-               }
+             var cleanedData = smoothWater(watData);
+             cleanedData.lis.forEach(function(name){
+               var soFar = dictionary[name];
+               cleanedData[name].attrs.forEach(function(attribute){
+                 soFar[attribute]=cleanedData[name][attribute];
+               })
              })
 
-
+             hapData.forEach(function(stat){
+               if(dictionary[stat.Country.trim()]){
+                 dictionary[stat.Country.trim()].happy=stat.Value;
+               }
+             })
 
              geoData.features.forEach(function(country){
                //console.log(country.properties.brk_name)
@@ -168,12 +157,42 @@ function smoothWater(waterData){
    "Total population with access to safe drinking-water (JMP)":"JMP",
    "Long-term average annual precipitation in volume":"rVol"};
   var countries = {};
+  countries["lis"]=[];
   waterData.forEach(function(line){
-    if(!countries[line.Country]){
-      countries[line.Country]={};
+    var c = line.Country;
+    if(!countries[c]){
+      countries[c]={};
+      countries[c]["attrs"]=[];
+      countries["lis"].push(c);
     }
+    var v = varDict[line.Variable]
+    if(!countries[c][v]){
+      var t = {};
+      t[line.Year]=line.Value;
+      countries[c][v]=t;
+      countries[c]["attrs"].push(v);
+    }
+    countries[c][v][line.Year]=line.Value;
   });
-
+  countries.lis.forEach(function(country){
+    var q= countries[country];
+    q.attrs.forEach(function(dType){
+      var vals = q[dType];
+      var tens = {};
+      var count=0;
+      var sum=0;
+      for(var i=1990;i<=2020;i++){
+        if((i%5)==0 && i!=1990){
+          if(count!=0){tens[i-5]=Math.ceil(sum/count);}
+          else{tens[i-5]=0;}
+          count=0; sum=0;
+        }
+        if(vals[i]){count++; sum+=parseInt(vals[i]);}
+      }
+      q[dType]=tens;
+    })
+  })
+  return countries;
 }
 
 function graph(gData,mData){
@@ -254,16 +273,6 @@ function grabTheCountries(svgSelector){
                     .select("g#pathHolder")
                     .selectAll("path");
 }
-//years go 2010 to 2017
-//units are pure deaths in that country from malaria in that year
-function malaria(svgSelector,year){
-  var countries = grabTheCountries(svgSelector);
-  var data = attrOfSelection(countries,"malaria",year);
-  var colorScale = scaleDealer(0,data);
-  fillsBaby(countries,colorScale,"malaria",year);
-
-  WASH("svg.a","all");
-}
 
 function scaleDealer(index,data){
   var schemes = [
@@ -294,60 +303,62 @@ function fillsBaby(allC, color, attr, attr2){
     })
 }
 
+function lessIsMore(svgSelector,attr1,attr2,index){
+  var countries = grabTheCountries(svgSelector);
+  var data = attrOfSelection(countries,attr1,attr2);
+  var colorScale = scaleDealer(index,data);
+  fillsBaby(countries,colorScale,attr1,attr2);
+}
+
+//years go 2010 to 2017
+//units are pure deaths in that country from malaria in that year
+function malaria(svgSelector,year){
+  lessIsMore(svgSelector,"malaria",year,0);
+}
+
 //year is just 2016
 //units are deaths per 100,000 in that country from WASH in 2016
 //or overall deaths. For the former, the second attribute should be "all", o.w. "perH"
 function WASH(svgSelector,allOrH){
-  var countries = grabTheCountries(svgSelector);
-  var data = attrOfSelection(countries,"wash",allOrH);
-  var colorScale = scaleDealer(1,data);
-  fillsBaby(countries,colorScale,"wash",allOrH);
-
-  cholera(svgSelector,2000);
+  lessIsMore(svgSelector,"wash",allOrH,1);
 }
 
 //valid years are in 2016-1960
 function cholera(svgSelector,year){
-  var countries = grabTheCountries(svgSelector);
-  var data = attrOfSelection(countries,"cholera",year);
-  var colorScale = scaleDealer(2,data);
-  fillsBaby(countries,colorScale,"cholera",year);
-
-  dia(svgSelector,"DALY");
+  lessIsMore(svgSelector,"cholera",year,2);
 }
 
 //type is "all15","perH15", "all16","perH16", or "DALY"
 function dia(svgSelector,type){
-  var countries = grabTheCountries(svgSelector);
-  var data = attrOfSelection(countries,"dia",type);
-  var colorScale = scaleDealer(3,data);
-  fillsBaby(countries,colorScale,"dia",type);
-
-  JMP(svgSelector,2012);
+  lessIsMore(svgSelector,"dia",type,3);
 }
 
 //for most water data, years are 1982-2017, in multiples of 5
 function JMP(svgSelector,year){
-  var countries = grabTheCountries(svgSelector);
-  var data = attrOfSelection(countries,"JMP",year);
-  var colorScale = scaleDealer(4,data);
-  fillsBaby(countries,colorScale,"JMP",year);
-
-  rain(svgSelector,"rVol","2017");
+  lessIsMore(svgSelector,"JMP",year,4)
 }
 
 function rain(svgSelector,type,year){
-  var countries = grabTheCountries(svgSelector);
-  var data = attrOfSelection(countries,type,year);
-  var colorScale = scaleDealer(5,data);
-  fillsBaby(countries,colorScale,type,year);
+  lessIsMore(svgSelector,type,year,5);
 }
 
-function checkingSomething(){
-  var countries = d3.select("path#Egypt")
-                    .on("click",function(d){
-                      console.log("I can click through the rectangle");
-                      return 9;
-                    });
-  console.log(countries);
+function GDP(svgSelector,year){
+  lessIsMore(svgSelector,"GDP",year,6);
+}
+
+function hunger(svgSelector,year){
+  lessIsMore(svgSelector,"hunger",year,7);
+}
+
+//type is "uWat" or "uWatper"
+function useable(svgSelector,type,year){
+  lessIsMore(svgSelector,type,year,8);
+}
+
+function agr(svgSelector,year){
+  lessIsMore(svgSelector,"aWat",year,9);
+}
+
+function happy(svgSelector){
+  lessIsMore(svgSelector,"happy",10);
 }
