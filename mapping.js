@@ -6,7 +6,8 @@ function start(){
     d3.csv("malaria_mort.csv"),
     d3.csv("aPop2016.csv"),
     d3.csv("washPer100.csv"),
-    d3.json("cholera.json")];
+    d3.json("cholera.json"),
+    d3.csv("diarrhea1.csv")];
   Promise.all(promise_pile)
          .then(
            function(data){
@@ -15,6 +16,7 @@ function start(){
              var popData = data[2];
              var wasData = data[3];
              var choData = data[4];
+             var diaData = data[5];
 
              var dictionary={};
 
@@ -39,20 +41,24 @@ function start(){
                 }
              })
 
-             choData.fact.forEach(function(event){
-               var c = event.dim.COUNTRY;
-               if(dictionary[c]){
-                 var x = dictionary[c].cholera;
-                 if(x){
-                   x[event.dim.YEAR]=event.Value;
-                 }
-                 else{
-                   dictionary[c].cholera = {};
-                 }
+             var fixCho = compactCholera(choData.fact,dictionary);
+             fixCho.forEach(function(country){
+               dictionary[country.Country].cholera=country;
+             })
+
+             diaData.forEach(function(country){
+               var s = country.Country.trim();
+               if(dictionary[s]){
+                 var x={};
+                 x.perH=country.perH;
+                 x.all = Math.ceil(country.perH * dictionary[s].pop/100000);
+                 dictionary[s].dia = x;
                }
              })
 
+
              geoData.features.forEach(function(country){
+               //console.log(country.properties.brk_name)
                if(dictionary[country.properties.brk_name]){
                  country.properties.daters = dictionary[country.properties.brk_name];
                  country.properties.daters.Country = country.properties.brk_name;
@@ -60,7 +66,7 @@ function start(){
                else{
                  country.properties.daters= {Country:country.properties.brk_name};
                }
-               console.log(country.properties.daters);
+               //console.log(country.properties.daters);
              })
 
              graph(geoData);
@@ -68,6 +74,46 @@ function start(){
            function(err){
              console.log(err);
          });
+}
+
+function compactCholera(cholera,dict){
+  var choFirst = {};
+  var names = [];
+  cholera.forEach(function(d){
+    var temp = d.dim.COUNTRY;
+    if(dict[temp]){
+        if(choFirst[temp]){
+          choFirst[temp][d.dim.YEAR]=d.Value;
+        }
+        else{
+          names.push(temp);
+          var m={}
+          m[d.dim.YEAR]=d.Value;
+          choFirst[temp]=m;
+        }
+    };
+  });
+  var choTwo = {};
+  var base = 1960;
+  names.forEach(function(nom){
+    var c = choFirst[nom];
+    [0,1,2,3,4,5,6].forEach(function(decade){
+      var count = 0;
+      var sum = 0;
+      [0,1,2,3,4,5,6,7,8,9].forEach(function(year){
+        if(c[base+10*decade+year]){
+          count++;
+          sum+=parseInt(c[base+10*decade+year]);
+        }
+      });
+      if(!choTwo[nom]){
+        choTwo[nom]={};
+      }
+      if(count!=0){choTwo[nom][base+decade*10]=10*Math.ceil(sum/count);}
+      else{choTwo[nom][base+decade*10]=0;}
+    })
+  });
+  return names.map(function(name){var x=choTwo[name]; x["Country"]=name;return x;});
 }
 
 function graph(gData,mData){
@@ -208,7 +254,20 @@ function cholera(svgSelector,year){
   var data = attrOfSelection(countries,"cholera",year);
   var colorScale = scaleDealer(2,data);
   fillsBaby(countries,colorScale,"cholera",year);
+
+  singleDia(svgSelector,"all");
 }
+
+//like for WASH, allOrH is either "all" or "perH"
+function singleDia(svgSelector,allOrH){
+  var countries = d3.select(svgSelector)
+                    .select("g#pathHolder")
+                    .selectAll("path");
+  var data = attrOfSelection(countries,"dia",allOrH);
+  var colorScale = scaleDealer(3,data);
+  fillsBaby(countries,colorScale,"dia",allOrH);
+}
+
 
 function checkingSomething(){
   var countries = d3.select("path#Egypt")
