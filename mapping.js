@@ -7,7 +7,10 @@ function start(){
     d3.csv("aPop2016.csv"),
     d3.csv("washPer100.csv"),
     d3.json("cholera.json"),
-    d3.csv("diarrhea1.csv")];
+    d3.csv("diarrhea1.csv"),
+    d3.csv("diarrheaData.csv"),
+    d3.csv("allTheWater.csv")
+  ];
   Promise.all(promise_pile)
          .then(
            function(data){
@@ -17,6 +20,8 @@ function start(){
              var wasData = data[3];
              var choData = data[4];
              var diaData = data[5];
+             var d2aData = data[6];
+             var watData = data[7];
 
              var dictionary={};
 
@@ -49,13 +54,39 @@ function start(){
              diaData.forEach(function(country){
                var s = country.Country.trim();
                if(dictionary[s]){
-                 var x={};
-                 x.perH=country.perH;
-                 x.all = Math.ceil(country.perH * dictionary[s].pop/100000);
+                 var x= {perH15: country.perH, all15:Math.ceil(country.perH * dictionary[s].pop/100000)};
                  dictionary[s].dia = x;
                }
              })
 
+             d2aData.forEach(function(line){
+               var q=line.Country;
+               if(dictionary[q]){
+                 if(!dictionary[q].dia){dictionary[q].dia={};}
+                 dictionary[q].dia.DALY = line.DALY;
+                 dictionary[q].dia.perH16 = line.perH;
+                 dictionary[q].dia.all16  = line.all;
+               }
+             })
+
+//pop is in 1000s, GDP is current USD/person,  NRI is mm/year of #I don't get this one
+//tWat is in 10^9 m^3/year, so is aWat, so is uWat, uWatPer is m^3 /person/year
+//JMP is % of people with clean water
+             var varDict = {"Total Population":"popTime","GDP per capita":"GDP",
+              "National Rainfall Index (NRI)":"NRI", "Total exploitable water resources":"tWat",
+              "Agricultural water withdrawal":"aWat","Total water withdrawal":"uWat",
+              "Total water withdrawal per capita":"uWatper", "Total population with access to safe drinking-water (JMP)":"JMP"};
+
+             watData.forEach(function(stat){
+               if(dictionary[stat.Country][varDict[stat.Variable]]){
+                 dictionary[stat.Country][varDict[stat.Variable]][stat.Year]=stat.Value;
+               }
+               else{
+                 var o = {};
+                 o[stat.Year]=stat.Value;
+                 dictionary[stat.Country][varDict[stat.Variable]]=o;
+               }
+             })
 
              geoData.features.forEach(function(country){
                //console.log(country.properties.brk_name)
@@ -66,7 +97,7 @@ function start(){
                else{
                  country.properties.daters= {Country:country.properties.brk_name};
                }
-               //console.log(country.properties.daters);
+               console.log(country.properties.daters);
              })
 
              graph(geoData);
@@ -166,14 +197,13 @@ function graph(gData,mData){
           .attr("id",function(d,i){
             return d["properties"]["brk_name"];
           });
-
-   countries.append("rect")
-            .attr("x",0)
-            .attr("y",0)
-            .attr("width",width)
-            .attr("height",height)
-            .attr("opacity",0)
-            .attr("fill","white");
+          // countries.append("rect")
+          //          .attr("x",0)
+          //          .attr("y",0)
+          //          .attr("width",width)
+          //          .attr("height",height)
+          //          .attr("opacity",0)
+          //          .attr("fill","white");
   malaria("svg.a",2017);
 }
 
@@ -255,19 +285,26 @@ function cholera(svgSelector,year){
   var colorScale = scaleDealer(2,data);
   fillsBaby(countries,colorScale,"cholera",year);
 
-  singleDia(svgSelector,"all");
+  dia(svgSelector,"DALY");
 }
 
-//like for WASH, allOrH is either "all" or "perH"
-function singleDia(svgSelector,allOrH){
+//type is "all15","perH15", "all16","perH16", or "DALY"
+function dia(svgSelector,type){
   var countries = d3.select(svgSelector)
                     .select("g#pathHolder")
                     .selectAll("path");
-  var data = attrOfSelection(countries,"dia",allOrH);
+  var data = attrOfSelection(countries,"dia",type);
   var colorScale = scaleDealer(3,data);
-  fillsBaby(countries,colorScale,"dia",allOrH);
+  fillsBaby(countries,colorScale,"dia",type);
 }
 
+function waterBase(){
+
+}
+
+function waterFarm(){
+
+}
 
 function checkingSomething(){
   var countries = d3.select("path#Egypt")
