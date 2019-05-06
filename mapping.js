@@ -98,6 +98,8 @@ function start(){
                }
              })
 
+
+
              geoData.features.forEach(function(country){
                //console.log(country.properties.brk_name)
                if(dictionary[country.properties.brk_name]){
@@ -155,6 +157,23 @@ function compactCholera(cholera,dict){
     })
   });
   return names.map(function(name){var x=choTwo[name]; x["Country"]=name;return x;});
+}
+
+function smoothWater(waterData){
+  var varDict = {"Total population":"popTime","GDP per capita":"GDP",
+   "Long-term average annual precipitation in depth":"rDep",
+   "Number of people undernourished (3-year average)":"hunger",
+   "Agricultural water withdrawal":"aWat","Total water withdrawal":"uWat",
+   "Total water withdrawal per capita":"uWatper",
+   "Total population with access to safe drinking-water (JMP)":"JMP",
+   "Long-term average annual precipitation in volume":"rVol"};
+  var countries = {};
+  waterData.forEach(function(line){
+    if(!countries[line.Country]){
+      countries[line.Country]={};
+    }
+  });
+
 }
 
 function graph(gData,mData){
