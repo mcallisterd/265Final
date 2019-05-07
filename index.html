@@ -9,15 +9,57 @@
 <script src="https://d3js.org/d3-array.v1.min.js"></script>
 <script src="https://d3js.org/d3-geo.v1.min.js"></script>
 <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+
+
 <style media="screen">
-  rect{
-    opacity:.4;
+  svg{
+    background-color: black;
+  }
+  .a{
+    border:8px solid red;
+  }
+  .dataDrop{
+    width:150px;
+    position:relative;
+    float:right;
+    overflow:hidden;
+  }
+  .dataRange{
+    width:150px;
+    position:relative;
+    float:left;
+    overflow:hidden;
+  }
+  .smallHold{
+    width:300px;
+    overflow:hidden;
+  }
+  .dropper{
+    display:none;
   }
 </style>
 
   <body>
-    <svg class="a">
 
-    </svg>
+<div class="options">
+<p>Options</p>
+
+<div class="general">
+  <div class="adder">
+    <p>Add Map</p>
+  </div>
+  <div class="remover">
+    <p>Remove Map</p>
+  </div>
+  <div class="sink" onclick="addMap('b')">
+    <p>Synchronize Map Movement</p>
+  </div>
+
+</div>
+</div>
+
   </body>
+  <script type="text/javascript">
+    makeOptionsBoxes("Map 1");
+  </script>
 </html>

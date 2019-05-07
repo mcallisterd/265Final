@@ -10,7 +10,8 @@ function start(){
     d3.csv("diarrhea1.csv"),
     d3.csv("diarrheaData.csv"),
     d3.csv("allTheWater.csv"),
-    d3.csv("happy.csv")
+    d3.csv("happy.csv"),
+    d3.csv("ClimateAndCodes.csv")
   ];
   Promise.all(promise_pile)
          .then(
@@ -24,6 +25,7 @@ function start(){
              var d2aData = data[6];
              var watData = data[7];
              var hapData = data[8];
+             var codData = data[9];
 
              var dictionary={};
 
@@ -89,19 +91,44 @@ function start(){
                }
              })
 
-             geoData.features.forEach(function(country){
-               //console.log(country.properties.brk_name)
-               if(dictionary[country.properties.brk_name]){
-                 country.properties.daters = dictionary[country.properties.brk_name];
-                 country.properties.daters.Country = country.properties.brk_name;
-               }
-               else{
-                 country.properties.daters= {Country:country.properties.brk_name};
-               }
-               console.log(country.properties.daters);
+             codData.forEach(function(stat){
+               dictionary[stat.Country.trim()].code = stat.Code;
              })
 
-             graph(geoData);
+             var queries = [];
+             var cOrder = [];
+             var qBase = "http://climatedataapi.worldbank.org/climateweb/rest/v1/country/annualavg/bccr_bcm2_0/pr/";
+             geoData.features.forEach(function(country){
+               var nomme = country.properties.brk_name;
+               //console.log(nomme)
+               if(dictionary[nomme]){
+                 country.properties.daters = dictionary[nomme];
+                 country.properties.daters.Country = nomme;
+               }
+               else{
+                 country.properties.daters= {Country:nomme};
+               }
+               if(dictionary[nomme] && dictionary[nomme].code!="SSD"){
+                 cOrder.push(nomme);
+                 queries.push(d3.csv(qBase+"2020/2039/"+dictionary[nomme].code));
+                 queries.push(d3.csv(qBase+"2040/2059/"+dictionary[nomme].code));
+               }
+             });
+             Promise.all(queries)
+                    .then(function(cliData){
+               cliData.forEach(function(pair,i){
+                 var belongs = Math.floor(i/2);
+                 if(i%2 ==0){dictionary[cOrder[belongs]].projection={};}
+                  var s=pair.columns[10];
+                  dictionary[cOrder[belongs]].projection[2020+20*(i%2)]=s.slice(1,s.length-2);
+               })
+             });
+
+             console.log(dictionary);
+             graph(geoData,"a");
+
+             d3.select("body")
+               .datum(geoData);
          },
            function(err){
              console.log(err);
@@ -195,13 +222,15 @@ function smoothWater(waterData){
   return countries;
 }
 
-function graph(gData,mData){
+function graph(gData,className){
   var height = 500;
   var width = 500;
 
-  var svg = d3.select("svg")
+  var svg = d3.select("body")
+              .append("svg")
               .attr("height",height)
-              .attr("width",width);
+              .attr("width",width)
+              .attr("class",className);
 
   var projection = d3.geoBromley()
                      .translate([width/3,height/2])
@@ -225,16 +254,14 @@ function graph(gData,mData){
     projection.translate(tail).scale(scala);
     svg.selectAll("path").attr("d",geoMagic);
   }
-
   var countries = svg.append("g")
-                     .attr("id","pathHolder")
+                     .attr("id","pathHolder"+className)
                      .call(truck)
                      .call(truck.transform,
                      d3.zoomIdentity
                        .translate(width/2,height/2)
                        .scale(.18)
-                       .translate(-390,50));
-
+                       .translate(-590,50));
   countries.selectAll("path")
           .data(gData.features)
           .enter()
@@ -245,14 +272,54 @@ function graph(gData,mData){
           .attr("id",function(d,i){
             return d["properties"]["brk_name"];
           });
-          // countries.append("rect")
-          //          .attr("x",0)
-          //          .attr("y",0)
-          //          .attr("width",width)
-          //          .attr("height",height)
-          //          .attr("opacity",0)
-          //          .attr("fill","white");
-  malaria("svg.a",2017);
+  cholera("a",2010);
+}
+
+function makeOptionsBoxes(className){
+  var container = d3.select("div.options")
+                    .append("div")
+                    .attr("class","smallHold")
+                    .attr("id",className);
+  container.append("p")
+           .text(className);
+   var dDrop = container.append("div")
+           .attr("class","dataDrop")
+           .attr("id",'off')
+           .on("click",function(){
+             var dro=d3.selectAll("div.dropper");
+             if(d3.select(this).attr("id")==="on"){
+               dro.style("display","none");
+               d3.select(this).attr("id","off");
+             }
+             else{
+               dro.style("display","block");
+               d3.select(this).attr("id","on");
+             }
+           })
+           .append("p")
+           .text("Data Set");
+  dDrop.selectAll("div")
+       .data(["GDP","JMP","Agr. Water Use","Cholera Deaths","Diarrhea Deaths"
+       ,"Number Malnourished","Malaria","Temperature","Precipitation",
+       "Overall Water Use","WASH Deaths"])
+       .enter()
+       .append("div")
+       .attr("class","dropper")
+       .append("p")
+       .text(function(d){return d;});
+  container.append("div")
+           .attr("class","dataRange")
+           .append("p")
+           .text("Data Range");
+  container.append("div")
+           .attr("class","giggle")
+           .append("p")
+           .text("Toggle Legend");
+}
+
+function addMap(className){
+  graph(d3.select("body").data()[0],className);
+  makeOptionsBoxes(className);
 }
 
 function attrOfSelection(selection,attr,otherAtt){
@@ -268,10 +335,10 @@ function attrOfSelection(selection,attr,otherAtt){
   return data
 }
 
-function grabTheCountries(svgSelector){
-  return d3.select(svgSelector)
-                    .select("g#pathHolder")
-                    .selectAll("path");
+function grabTheCountries(className){
+  return d3.select("svg."+className)
+           .select("g#pathHolder"+className)
+           .selectAll("path");
 }
 
 function scaleDealer(index,data){
@@ -286,6 +353,42 @@ function scaleDealer(index,data){
   //.domain([0,d3.max(data,function(d){return d;})]) no range.
 }
 
+function theEarlOfWarwick(className,dataType,scale){
+  var svg= d3.select("svg."+className);
+  var owner = svg.append("g").attr("class",dataType).attr("transform","translate(0,330)");
+  var boxValues = scale.quantiles().map(function(d){return Math.floor(d)});
+  var betterNames = { "malaria":"Malaria","wash":"WASH","cholera":"Cholera","dia":"Diarrhea",
+          "JMP":"JMP","rVol":"Rain Volume","GDP":"GDP", "rDep":"Rain Depth",
+           "uWat":"Water Use", "uWatper":"UWAT per capita", "aWat":"AWAT" ,"hunger":"Hunger"};
+  owner.append("rect")
+       .attr("x",0)
+       .attr("y",0)
+       .attr("width",100)
+       .attr("height",170)
+       .attr("fill","grey");
+  var subG = owner.selectAll("g")
+                  .data(boxValues)
+                  .enter()
+                  .append("g");
+  subG.append("rect")
+      .attr("x",10)
+      .attr("y",function(d,i){return 5+15*i;})
+      .attr("width",10)
+      .attr("height",10)
+      .attr("fill",function(d){return scale(d)});
+  subG.append("text")
+      .text(function(d){return d;})
+      .attr("x",25)
+      .attr("y",function(d,i){return 15+15*i});
+  owner.append("text")
+       .attr("x",2)
+       .attr("y",140)
+       .text("Thresholds for")
+  owner.append("text")
+       .attr("x",2)
+       .attr("y",160)
+       .text(betterNames[dataType]);
+}
 //removed allC parameter which was the country attrOfSelection
 // and instead of selection and then .attr..., we did allC.attr...
 //d3.select(svgName).select("g#pathHolder").selectAll("path")
@@ -303,62 +406,67 @@ function fillsBaby(allC, color, attr, attr2){
     })
 }
 
-function lessIsMore(svgSelector,attr1,attr2,index){
-  var countries = grabTheCountries(svgSelector);
+function lessIsMore(className,attr1,attr2,index){
+  var countries = grabTheCountries(className);
   var data = attrOfSelection(countries,attr1,attr2);
   var colorScale = scaleDealer(index,data);
   fillsBaby(countries,colorScale,attr1,attr2);
+  return colorScale;
 }
 
 //years go 2010 to 2017
 //units are pure deaths in that country from malaria in that year
-function malaria(svgSelector,year){
-  lessIsMore(svgSelector,"malaria",year,0);
+function malaria(className,year){
+  theEarlOfWarwick(className,"malaria",lessIsMore(className,"malaria",year,0))
 }
 
 //year is just 2016
 //units are deaths per 100,000 in that country from WASH in 2016
 //or overall deaths. For the former, the second attribute should be "all", o.w. "perH"
-function WASH(svgSelector,allOrH){
-  lessIsMore(svgSelector,"wash",allOrH,1);
+function WASH(className,allOrH){
+  theEarlOfWarwick(className,"wash",lessIsMore(className,"wash",year,1));
 }
 
 //valid years are in 2016-1960
-function cholera(svgSelector,year){
-  lessIsMore(svgSelector,"cholera",year,2);
+function cholera(className,year){
+  theEarlOfWarwick(className,"cholera",lessIsMore(className,"cholera",year,2));
 }
 
 //type is "all15","perH15", "all16","perH16", or "DALY"
-function dia(svgSelector,type){
-  lessIsMore(svgSelector,"dia",type,3);
+function dia(className,type){
+  theEarlOfWarwick(className,"dia",lessIsMore(className,"dia",year,3));
 }
 
 //for most water data, years are 1982-2017, in multiples of 5
-function JMP(svgSelector,year){
-  lessIsMore(svgSelector,"JMP",year,4)
+function JMP(className,year){
+  theEarlOfWarwick(className,"JMP",lessIsMore(className,"JMP",year,4));
 }
 
-function rain(svgSelector,type,year){
-  lessIsMore(svgSelector,type,year,5);
+function rain(className,type,year){
+  theEarlOfWarwick(className,type,lessIsMore(className,type,year,5));
 }
 
-function GDP(svgSelector,year){
-  lessIsMore(svgSelector,"GDP",year,6);
+function GDP(className,year){
+  theEarlOfWarwick(className,"GDP",lessIsMore(className,"GDP",year,6));
 }
 
-function hunger(svgSelector,year){
-  lessIsMore(svgSelector,"hunger",year,7);
+function hunger(className,year){
+  theEarlOfWarwick(className,"hunger",lessIsMore(className,"hunger",year,7));
 }
 
 //type is "uWat" or "uWatper"
-function useable(svgSelector,type,year){
-  lessIsMore(svgSelector,type,year,8);
+function useable(className,type,year){
+  theEarlOfWarwick(className,type,lessIsMore(className,type,year,9));
 }
 
-function agr(svgSelector,year){
-  lessIsMore(svgSelector,"aWat",year,9);
+function agr(className,year){
+  theEarlOfWarwick(className,"aWat",lessIsMore(className,"aWat",year,8));
 }
 
-function happy(svgSelector){
-  lessIsMore(svgSelector,"happy",10);
+function happy(className){
+  theEarlOfWarwick(className,"happy",lessIsMore(className,"happy",10));
+}
+//valid years are 2020 or 2040
+function temp(className,year){
+  theEarlOfWarwick(className,"projection",lessIsMore(className,"projection",year,11));
 }

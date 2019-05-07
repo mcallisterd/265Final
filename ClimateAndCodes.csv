@@ -1,52 +1,54 @@
-Country,Change,Error,Code
-﻿Algeria,2.86,0.28,DZA
-Angola,1.61,0.34,AGO
-Benin,,,BEN
-Botswana,,,BWA
-Burkina Faso,,,BFA
-Burundi,,,BDI
-Cameroon,,,CMR
-Central African Republic,,,CAF
-Chad,,,TCD
-Congo,,,COG
-DRC,,,COD
-Côte d'Ivoire,,,CIV
-Djibouti,,,DJI
-Egypt,,,EGY
-Equatorial Guinea,,,GNQ
-Eritrea,,,ERI
-Ethiopia,,,ETH
-Gabon,,,GAB
-Gambia,,,GMB
-Ghana,,,GHA
-Guinea,,,GIN
-Guinea-Bissau,,,GNB
-Kenya,,,KEN
-Lesotho,,,LSO
-Liberia,,,LBR
-Libya,,,LBY
-Madagascar,,,MDG
-Malawi,,,MWI
-Mauritania,,,MRT
-Mauritius,,,MUS
-Morocco,,,MAR
-Mozambique,,,MOZ
-Namibia,,,NAM
-Niger,,,NER
-Nigeria,,,NGA
-Reunion,,,REU
-Rwanda,,,RWA
-Senegal,,,SEN
-Sierra Leone,,,SLE
-Somalia,,,SOM
-SouthAfrica,,,ZAF
-Sudan,,,SDN
-South Sudan,,,SSD
-Swaziland,,,SWZ
-Tanzania,,,TZA
-Togo,,,TGO
-Tunisia,,,TUN
-Uganda,,,UGA
-Western Sahara,,,ESH
-Zambia,,,ZMB
-Zimbabwe,,,ZWE
+Country,Code
+﻿Algeria,DZA
+Angola,AGO
+Benin,BEN
+Botswana,BWA
+Burkina Faso,BFA
+Burundi,BDI
+Cameroon,CMR
+Mali,MLI
+Comoros,COM
+Cape Verde,CPV
+Central African Rep.,CAF
+Chad,TCD
+Republic of Congo,COG
+Democratic Republic of the Congo,COD
+Côte d'Ivoire,CIV
+Djibouti,DJI
+Egypt,EGY
+Eq. Guinea,GNQ
+Eritrea,ERI
+Ethiopia,ETH
+Gabon,GAB
+Gambia,GMB
+Ghana,GHA
+Guinea,GIN
+Guinea-Bissau,GNB
+Kenya,KEN
+Lesotho,LSO
+Liberia,LBR
+Libya,LBY
+Madagascar,MDG
+Malawi,MWI
+Mauritania,MRT
+Mauritius,MUS
+Morocco,MAR
+Mozambique,MOZ
+Namibia,NAM
+Niger,NER
+Nigeria,NGA
+Rwanda,RWA
+Senegal,SEN
+Sierra Leone,SLE
+Somalia,SOM
+Sao Tome and Principe,STP
+South Africa,ZAF
+Sudan,SDN
+S. Sudan,SSD
+Swaziland,SWZ
+Tanzania,TZA
+Togo,TGO
+Tunisia,TUN
+Uganda,UGA
+Zambia,ZMB
+Zimbabwe,ZWE
