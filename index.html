@@ -10,15 +10,15 @@
 <script src="https://d3js.org/d3-geo.v1.min.js"></script>
 <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
 
-
 <style media="screen">
+  body{
+    background-color: silver;
+  }
   svg{
     background-color: black;
+    border:4px solid red;
   }
-  .a{
-    border:8px solid red;
-  }
-  .dataDrop{
+  .smallHold> div{
     width:150px;
     position:relative;
     float:right;
@@ -34,8 +34,18 @@
     width:300px;
     overflow:hidden;
   }
-  .dropper{
+  .dataDrop > div{
     display:none;
+  }
+  .options{
+    position:relative;
+    float:right;
+    border-left:5px solid black;
+    background-color: grey;
+  }
+  .options p {
+    color:white;
+    text-align:center;
   }
 </style>
 
@@ -45,21 +55,20 @@
 <p>Options</p>
 
 <div class="general">
-  <div class="adder">
+  <p><a href="#"></a>
+  </p>
+  <div class="adder" onclick="addMap()">
     <p>Add Map</p>
   </div>
-  <div class="remover">
-    <p>Remove Map</p>
-  </div>
-  <div class="sink" onclick="addMap('b')">
+  <div class="sink" onclick="synch()">
     <p>Synchronize Map Movement</p>
   </div>
 
 </div>
 </div>
-
   </body>
   <script type="text/javascript">
-    makeOptionsBoxes("Map 1");
+    makeOptionsBoxes('a',"Map 1");
+    cholera("a",2010)
   </script>
 </html>

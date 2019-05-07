@@ -156,7 +156,7 @@ function compactCholera(cholera,dict){
   var base = 1960;
   names.forEach(function(nom){
     var c = choFirst[nom];
-    [0,1,2,3,4,5,6].forEach(function(decade){
+    [1,2,3,4,5].forEach(function(decade){
       var count = 0;
       var sum = 0;
       [0,1,2,3,4,5,6,7,8,9].forEach(function(year){
@@ -239,7 +239,6 @@ function graph(gData,className){
   var geoMagic = d3.geoPath(projection);
 
   var knuck = d3.drag().on('drag',dragon);
-  var truck = d3.zoom().on("zoom",zuma);
   function dragon(d){
       var head = projection.translate();
       head[0]+=d3.event.dx;
@@ -247,6 +246,7 @@ function graph(gData,className){
       projection.translate(head);
       svg.selectAll("path").attr("d",geoMagic);
   }
+  var truck = d3.zoom().on("zoom",zuma);
 
   function zuma(d){
     var tail = [d3.event.transform.x,d3.event.transform.y];
@@ -272,21 +272,87 @@ function graph(gData,className){
           .attr("id",function(d,i){
             return d["properties"]["brk_name"];
           });
-  cholera("a",2010);
+          cholera("a",2010)
 }
 
-function makeOptionsBoxes(className){
+var functionary={
+"Malaria":function malaria(className,year){
+  theEarlOfWarwick(className,"malaria",lessIsMore(className,"malaria",year,0))
+},
+"WASH Deaths":function WASH(className,allOrH){
+   theEarlOfWarwick(className,"wash",lessIsMore(className,"wash",year,1));
+},
+"Cholera Deaths":function cholera(className,year){
+  theEarlOfWarwick(className,"cholera",lessIsMore(className,"cholera",year,2));
+},
+"Diarrhea Deaths":function dia(className,type){
+  theEarlOfWarwick(className,"dia",lessIsMore(className,"dia",type,3));
+},
+"JMP":function JMP(className,year){
+  theEarlOfWarwick(className,"JMP",lessIsMore(className,"JMP",year,4));
+},
+"Precipitation":function rain(className,year){
+  theEarlOfWarwick(className,"rDep",lessIsMore(className,"rDep",year,5));
+},
+"GDP":function GDP(className,year){
+  theEarlOfWarwick(className,"GDP",lessIsMore(className,"GDP",year,6));
+},
+"Number Malnourished":function hunger(className,year){
+  theEarlOfWarwick(className,"hunger",lessIsMore(className,"hunger",year,7));
+},
+"Overall Water Use":function useable(className,year){
+  theEarlOfWarwick(className,"uWatper",lessIsMore(className,"uWatper",year,9));
+},
+"Agr. Water Use":function agr(className,year){
+  theEarlOfWarwick(className,"aWat",lessIsMore(className,"aWat",year,8));
+},
+"Happiness":function happy(className){
+  theEarlOfWarwick(className,"happy",lessIsMore(className,"happy",10));
+},
+"Temperature":function temp(className,year){
+  theEarlOfWarwick(className,"projection",lessIsMore(className,"projection",year,11));
+}}
+
+function synch(){
+
+  var svgs = d3.selectAll("svg");
+  console.log(svgs);
+  var height = 500;
+  var width = 500;
+  var projection = d3.geoBromley()
+                     .translate([width/3,height/2])
+                     .scale([350]);
+  var geoMagic = d3.geoPath(projection);
+  var truck = d3.zoom().on("zoom",zuma);
+
+  function zuma(d){
+    var tail = [d3.event.transform.x,d3.event.transform.y];
+    var scala = d3.event.transform.k*2000;
+    projection.translate(tail).scale(scala);
+    svgs.selectAll("path").attr("d",geoMagic);
+  }
+  console.log(svgs.selectAll("svg > g"))
+  var countries = svgs.selectAll("svg > g")
+                      .call(truck)
+                      .call(truck.transform,
+                       d3.zoomIdentity
+                       .translate(width/2,height/2)
+                       .scale(.18)
+                       .translate(-590,50));
+}
+
+function makeOptionsBoxes(type,className){
   var container = d3.select("div.options")
                     .append("div")
                     .attr("class","smallHold")
-                    .attr("id",className);
+                    .attr("id",type);
   container.append("p")
            .text(className);
    var dDrop = container.append("div")
-           .attr("class","dataDrop")
+           .attr("class","dataDrop"+type)
            .attr("id",'off')
            .on("click",function(){
-             var dro=d3.selectAll("div.dropper");
+             var dro=d3.selectAll("div.dropper"+type);
              if(d3.select(this).attr("id")==="on"){
                dro.style("display","none");
                d3.select(this).attr("id","off");
@@ -298,28 +364,94 @@ function makeOptionsBoxes(className){
            })
            .append("p")
            .text("Data Set");
+
+
   dDrop.selectAll("div")
-       .data(["GDP","JMP","Agr. Water Use","Cholera Deaths","Diarrhea Deaths"
+       .data(["GDP","JMP","Cholera Deaths","Diarrhea Deaths"
        ,"Number Malnourished","Malaria","Temperature","Precipitation",
-       "Overall Water Use","WASH Deaths"])
+       "Overall Water Use","WASH Deaths","Happiness"])//"Agr. Water Use"
        .enter()
        .append("div")
-       .attr("class","dropper")
+       .attr("class","dropper"+type)
+       .attr("id",type)
+       .style("display","none")
+       .on("click",function(d){
+         updateDataRange(d,type);
+         functionary[d](d3.select(this).attr("id"),d3.select("div.general").attr("id"));
+       })
        .append("p")
        .text(function(d){return d;});
   container.append("div")
-           .attr("class","dataRange")
+           .attr("class","dataRange"+type)
+           .attr("id",'off')
+           .on("click",function(){
+             var dro=d3.selectAll("div.dropper2"+type);
+             if(d3.select(this).attr("id")==="on"){
+               dro.style("display","none");
+               d3.select(this).attr("id","off");
+             }
+             else{
+               dro.style("display","block");
+               d3.select(this).attr("id","on");
+             }
+           })
            .append("p")
            .text("Data Range");
+
   container.append("div")
            .attr("class","giggle")
+           .attr("id","on")
+           .on("click",function(){
+             var leg = d3.select("svg."+type).select("g#legend");
+             if(d3.select(this).attr("id")==="on"){leg.attr("transform","translate(5000,0)"); d3.select(this).attr("id","off");}
+             else{leg.attr("transform","translate(0,330)"); d3.select(this).attr("id","on");}
+           })
            .append("p")
            .text("Toggle Legend");
 }
 
-function addMap(className){
-  graph(d3.select("body").data()[0],className);
-  makeOptionsBoxes(className);
+function updateDataRange(dataType,svgName){
+  var convert = {"GDP":"GDP","JMP":"JMP","Agr. Water Use":"aWat","Cholera Deaths":"cholera",
+  "Diarrhea Deaths":"dia","Number Malnourished":"hunger","Malaria":"malaria",
+  "Temperature":"projection","Precipitation":"rDep","Overall Water Use":"uWatper",
+  "WASH Deaths":"wash","Happiness":"happy"}
+
+  var data = d3.select("body").data()[0];
+  var valid ={};
+  data.features.forEach(function(country){
+    if(country.properties.daters[convert[dataType]]){
+    Object.getOwnPropertyNames(country.properties.daters[convert[dataType]])
+          .forEach(function(val){
+      valid[val]="Yeah";
+    })}
+  })
+  var options = Object.getOwnPropertyNames(valid);
+  d3.select("div.options").attr("id",convert[dataType]);
+  d3.select("div.general").attr("id",options[0]);
+  d3.select("div.dataRange"+svgName).selectAll("div").remove();
+
+  d3.select("div.dataRange"+svgName)
+    .selectAll("div")
+    .data(options)
+    .enter()
+    .append("div")
+    .attr("class","dropper2"+svgName)
+    .style("display","none")
+    .on("click",function(d){
+      d3.select("div.general").attr("id",d);
+      functionary[dataType](svgName,d);
+    })
+    .append("p")
+    .text(function(d){return d;});
+}
+
+function addMap(){
+  var ids = ["a","b","c","d","e","f"];
+  var L = d3.selectAll("svg").nodes().length;
+
+  graph(d3.select("body").data()[0],ids[L]);
+  makeOptionsBoxes(ids[L],"Map "+(L+1).toString());
+  cholera(ids[L],2010)
 }
 
 function attrOfSelection(selection,attr,otherAtt){
@@ -355,11 +487,12 @@ function scaleDealer(index,data){
 
 function theEarlOfWarwick(className,dataType,scale){
   var svg= d3.select("svg."+className);
-  var owner = svg.append("g").attr("class",dataType).attr("transform","translate(0,330)");
+  svg.select("g#legend").remove();
+  var owner = svg.append("g").attr("class",dataType).attr("id","legend").attr("transform","translate(0,330)");
   var boxValues = scale.quantiles().map(function(d){return Math.floor(d)});
   var betterNames = { "malaria":"Malaria","wash":"WASH","cholera":"Cholera","dia":"Diarrhea",
-          "JMP":"JMP","rVol":"Rain Volume","GDP":"GDP", "rDep":"Rain Depth",
-           "uWat":"Water Use", "uWatper":"UWAT per capita", "aWat":"AWAT" ,"hunger":"Hunger"};
+          "JMP":"JMP","rVol":"Rain Volume","GDP":"GDP", "rDep":"Rain Depth","happy":"Happiness",
+           "uWat":"Water Use", "uWatper":"UWAT per capita", "projection":"Future Precipitation","aWat":"AWAT" ,"hunger":"Hunger"};
   owner.append("rect")
        .attr("x",0)
        .attr("y",0)
@@ -389,9 +522,7 @@ function theEarlOfWarwick(className,dataType,scale){
        .attr("y",160)
        .text(betterNames[dataType]);
 }
-//removed allC parameter which was the country attrOfSelection
-// and instead of selection and then .attr..., we did allC.attr...
-//d3.select(svgName).select("g#pathHolder").selectAll("path")
+
 function fillsBaby(allC, color, attr, attr2){
     allC.attr("fill",function(d){
       var x=d.properties.daters[attr];
@@ -442,8 +573,9 @@ function JMP(className,year){
   theEarlOfWarwick(className,"JMP",lessIsMore(className,"JMP",year,4));
 }
 
-function rain(className,type,year){
-  theEarlOfWarwick(className,type,lessIsMore(className,type,year,5));
+//used to have option to do rVol or rDep, switching to just rDep
+function rain(className,year){
+  theEarlOfWarwick(className,"rDep",lessIsMore(className,"rDep",year,5));
 }
 
 function GDP(className,year){
@@ -454,9 +586,9 @@ function hunger(className,year){
   theEarlOfWarwick(className,"hunger",lessIsMore(className,"hunger",year,7));
 }
 
-//type is "uWat" or "uWatper"
-function useable(className,type,year){
-  theEarlOfWarwick(className,type,lessIsMore(className,type,year,9));
+//type is "uWat" or "uWatper". Switched this to default is uWatper
+function useable(className,year){
+  theEarlOfWarwick(className,"uWatper",lessIsMore(className,"uWatper",year,9));
 }
 
 function agr(className,year){
